@@ -15,7 +15,7 @@ from datasets import (
     load_metric
 )
 from qa_trainer import QATrainer
-from retriever import SparseRetrieval
+from retriever_bm25 import SparseRetrieval
 from transformers import (
     AutoConfig,
     AutoModelForQuestionAnswering,
@@ -85,7 +85,7 @@ def prepare_train_features(examples, tokenizer, question_column_name, pad_on_rig
         stride=data_args.doc_stride,
         return_overflowing_tokens=True,
         return_offsets_mapping=True,
-        # return_token_type_ids=False, # True if bert, False if roberta
+        return_token_type_ids=False, # True if bert, False if roberta
         padding="max_length" if data_args.pad_to_max_length else False,
     )
 
@@ -198,7 +198,7 @@ def prepare_validation_features(examples, tokenizer, question_column_name, pad_o
         stride=data_args.doc_stride,
         return_overflowing_tokens=True,
         return_offsets_mapping=True,
-        # return_token_type_ids=False, # True if bert, False if roberta
+        return_token_type_ids=False, # True if bert, False if roberta
         padding="max_length" if data_args.pad_to_max_length else False,
     )
 
