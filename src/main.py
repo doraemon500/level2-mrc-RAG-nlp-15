@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 import sys
@@ -15,7 +16,7 @@ from datasets import (
     load_metric
 )
 from qa_trainer import QATrainer
-from retriever_bm25 import SparseRetrieval
+from retriever import SparseRetrieval
 from transformers import (
     AutoConfig,
     AutoModelForQuestionAnswering,
@@ -26,8 +27,11 @@ from transformers import (
     TrainingArguments,
 )
 from utils import set_seed, check_no_error, postprocess_qa_predictions
+import wandb
 
 logger = logging.getLogger(__name__)
+wandb.init(project="odqa",
+           name="run_" + (datetime.datetime.now() + datetime.timedelta(hours=9)).strftime("%Y%m%d_%H%M%S"))
 
 def main():
     parser = HfArgumentParser(
@@ -339,7 +343,7 @@ def run_mrc(
         else:
             checkpoint = None
         train_result = trainer.train(resume_from_checkpoint=checkpoint)
-        trainer.save_model()  # Saves the tokenizer too for easy upload
+        trainer.save_model()
 
         metrics = train_result.metrics
         metrics["train_samples"] = len(train_dataset)

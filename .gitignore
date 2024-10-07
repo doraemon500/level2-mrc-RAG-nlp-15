@@ -7,3 +7,6 @@ data
 # outputs
 models
 output
+
+# wandb
+src/wandb
