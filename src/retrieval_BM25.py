@@ -390,7 +390,8 @@ if __name__ == "__main__":
             org_dataset["validation"].flatten_indices(),
         ])  # train dev 를 합친 4192 개 질문에 대해 모두 테스트
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path, use_fast=False)
+    # args.model_name_or_path(arguments.py 내부) or 원하는 모델 "monologg/koelectra-base-v3-finetuned-korquad" 작성
+    tokenizer = AutoTokenizer.from_pretrained("monologg/koelectra-base-v3-finetuned-korquad", use_fast=False)
     
     retriever = BM25SparseRetrieval(
         tokenize_fn=tokenizer.tokenize,
