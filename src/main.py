@@ -16,7 +16,7 @@ from datasets import (
     load_metric
 )
 from qa_trainer import QATrainer
-from retriever import SparseRetrieval
+from retrieval_BM25 import BM25SparseRetrieval
 from transformers import (
     AutoConfig,
     AutoModelForQuestionAnswering,
@@ -38,6 +38,7 @@ def main():
         (ModelArguments, DataTrainingArguments, TrainingArguments)
     )
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+    training_args.save_steps = 0
 
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s -    %(message)s",
@@ -151,8 +152,12 @@ def run_sparse_retrieval(
     data_path: str = "../data",
     context_path: str = "wikipedia_documents.json",
 ) -> DatasetDict:
-    retriever = SparseRetrieval(
-        tokenize_fn=tokenize_fn, data_path=data_path, context_path=context_path
+
+    retriever = BM25SparseRetrieval(
+        tokenize_fn=tokenize_fn,
+        args=data_args,  # args를 전달
+        data_path=data_path,
+        context_path=context_path
     )
     retriever.get_sparse_embedding()
 
