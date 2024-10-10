@@ -161,13 +161,13 @@ def run_sparse_retrieval(
     )
     retriever.get_sparse_embedding()
 
-    if data_args.use_faiss:
-        retriever.build_faiss(num_clusters=data_args.num_clusters)
-        df = retriever.retrieve_faiss(
-            datasets["validation"], topk=data_args.top_k_retrieval
-        )
-    else:
-        df = retriever.retrieve(datasets["validation"], topk=data_args.top_k_retrieval)
+    # if data_args.use_faiss:
+    #     retriever.build_faiss(num_clusters=data_args.num_clusters)
+    #     df = retriever.retrieve_faiss(
+    #         datasets["validation"], topk=data_args.top_k_retrieval
+    #     )
+    # else:
+    df = retriever.retrieve(datasets["validation"], topk=data_args.top_k_retrieval)
 
     if training_args.do_predict:
         f = Features(
