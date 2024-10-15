@@ -26,7 +26,7 @@ class BM25SparseRetrieval:
         self,
         tokenize_fn,
         args,
-        data_path: Optional[str] = "../data/",
+        data_path: Optional[str] = "data/",
         context_path: Optional[str] = "wikipedia_documents.json",
     ) -> None:
         """Arguments:

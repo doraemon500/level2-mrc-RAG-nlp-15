@@ -149,7 +149,7 @@ def run_sparse_retrieval(
     datasets: DatasetDict,
     training_args: TrainingArguments,
     data_args: DataTrainingArguments,
-    data_path: str = "../data",
+    data_path: str = "data",
     context_path: str = "wikipedia_documents.json",
 ) -> DatasetDict:
 
@@ -388,4 +388,7 @@ def run_mrc(
 
 
 if __name__ == "__main__":
-    main()
+    #main()
+    import torch
+    print(torch.__version__)
+    print(torch.cuda.is_available())
