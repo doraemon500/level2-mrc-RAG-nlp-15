@@ -9,6 +9,7 @@ class ModelArguments:
     """
     # CurtisJeon/klue-roberta-large-korquad_v1_qa
     # uomnf97/klue-roberta-finetuned-korquad-v2
+    # HANTAEK/klue-roberta-large-korquad-v1-qa-finetuned
     model_name_or_path: str = field(
         default="CurtisJeon/klue-roberta-large-korquad_v1_qa",
         metadata={
@@ -125,4 +126,10 @@ class DataTrainingArguments:
     context_path: str = field(
         default="wikipedia_documents.json",
         metadata={"help": "The name of the context file"},
+    )
+    alpha_retrieval: Optional[float] = field(
+        default=0.7,
+        metadata={
+            "help": "Value for hybridizing embedding scores in HybridSearch"
+        }
     )
