@@ -25,7 +25,7 @@ def timer(name):
     logging.info(f"[{name}] done in {time.time() - t0:.3f} s")
 
 
-class SparseRetrieval:
+class TFIDFRetrieval:
     def __init__(
         self,
         tokenize_fn,
@@ -251,7 +251,7 @@ if __name__ == "__main__":
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path, use_fast=False,)
 
-    retriever = SparseRetrieval(
+    retriever = TFIDFRetrieval(
         tokenize_fn=tokenizer.tokenize,
         data_path=args.data_path,
         context_path=args.context_path,

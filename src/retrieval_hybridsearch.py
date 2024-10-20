@@ -18,7 +18,10 @@ from torch.nn.functional import normalize
 from sklearn.feature_extraction.text import TfidfVectorizer
 from rank_bm25 import BM25Okapi, BM25Plus
 from transformers import AutoTokenizer, AutoModel
+from utils import set_seed
 
+set_seed(42)
+logger = logging.getLogger(__name__)
 
 @contextmanager
 def timer(name):
@@ -26,14 +29,10 @@ def timer(name):
     yield
     logging.info(f"[{name}] done in {time.time() - t0:.3f} s")
 
-
 def mean_pooling(model_output, attention_mask):
-    token_embeddings = model_output[0]  # 모델 출력의 첫 번째 요소는 토큰 임베딩입니다.
+    token_embeddings = model_output[0] #First element of model_output contains all token embeddings
     input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
-    sum_embeddings = torch.sum(token_embeddings * input_mask_expanded, 1)
-    sum_mask = torch.clamp(input_mask_expanded.sum(1), min=1e-9)
-    return sum_embeddings / sum_mask
-
+    return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
 class HybridSearch:
     def __init__(
@@ -53,9 +52,9 @@ class HybridSearch:
             'sentence-transformers/paraphrase-multilingual-mpnet-base-v2'
         )
         self.sparse_embeder = None
-        # self.sparse_embeder = TfidfVectorizer(
-        #     tokenizer=tokenize_fn, ngram_range=(1, 2), max_features=50000,
-        # )
+        self.sparse_embeder = TfidfVectorizer(
+            tokenizer=self.tokenize_fn, ngram_range=(1, 2), max_features=50000,
+        )
         self.dense_embeder = AutoModel.from_pretrained(
             'sentence-transformers/paraphrase-multilingual-mpnet-base-v2'
         )
@@ -63,10 +62,10 @@ class HybridSearch:
         self.dense_embeds = None
 
     def get_sparse_vectors(self, question=None):
-        vectorizer_path = os.path.join(self.data_path, "BM25Plus_sparse_vectorizer.bin")
-        embeddings_path = os.path.join(self.data_path, "BM25Plus_sparse_embedding.bin")
-        # vectorizer_path = os.path.join(self.data_path, "sparse_vectorizer.bin")
-        # embeddings_path = os.path.join(self.data_path, "sparse_embedding.bin")
+        # vectorizer_path = os.path.join(self.data_path, "BM25Plus_sparse_vectorizer.bin")
+        # embeddings_path = os.path.join(self.data_path, "BM25Plus_sparse_embedding.bin")
+        vectorizer_path = os.path.join(self.data_path, "sparse_vectorizer.bin")
+        embeddings_path = os.path.join(self.data_path, "sparse_embedding.bin")
 
         if question is None:
             if os.path.isfile(vectorizer_path) and os.path.isfile(embeddings_path):
@@ -77,8 +76,8 @@ class HybridSearch:
                 print("Sparse vectorizer and embeddings loaded.")
             else:
                 print("Fitting sparse vectorizer and building embeddings.")
-                self.sparse_embeder = BM25Plus([self.tokenize_fn(doc) for doc in self.contexts])
-                # self.sparse_embeds = self.sparse_embeder.fit_transform(self.contexts)
+                # self.sparse_embeder = BM25Plus([self.tokenize_fn(doc) for doc in self.contexts])
+                self.sparse_embeds = self.sparse_embeder.fit_transform(self.contexts)
                 with open(vectorizer_path, "wb") as f:
                     pickle.dump(self.sparse_embeder, f)
                 if self.dense_embeds is not None:
@@ -94,8 +93,8 @@ class HybridSearch:
                     print("Sparse vectorizer loaded for transforming the query.")
                 else:
                     raise ValueError("The TF-IDF vectorizer is not fitted. Please run get_sparse_vectors() first.")
-            self.sparse_embeder(self.tokenize_fn(question))
-            # return self.sparse_embeder.transform(question)
+            # self.sparse_embeder(self.tokenize_fn(question))
+            return self.sparse_embeder.transform(question)
 
 
     def get_dense_vectors(self, question=None):
@@ -157,11 +156,11 @@ class HybridSearch:
 
         # dense_score_normalized = min_max_normalize(dense_score)
         # sparse_score_normalized = min_max_normalize(sparse_score)
-        dense_score_normalized = z_score_normalize(dense_score)
-        sparse_score_normalized = z_score_normalize(sparse_score)
+        # dense_score_normalized = z_score_normalize(dense_score)
+        # sparse_score_normalized = z_score_normalize(sparse_score)
 
-        result = (1 - alpha) * dense_score_normalized + alpha * sparse_score_normalized
-        # result = (1 - alpha) * dense_score + alpha * sparse_score
+        # result = (1 - alpha) * dense_score_normalized + alpha * sparse_score_normalized
+        result = (1 - alpha) * dense_score + alpha * sparse_score
         return result
 
     def get_similarity_score(self, q_vec, c_vec):
@@ -180,7 +179,7 @@ class HybridSearch:
         return torch.mm(q_vec, c_vec.T)
 
     def retrieve(self, query_or_dataset, topk: Optional[int] = 1, alpha: Optional[float] = 0.7):
-        # assert self.sparse_embeds is not None, "You should first execute `get_sparse_vectors()`"
+        assert self.sparse_embeds is not None, "You should first execute `get_sparse_vectors()`"
         assert self.dense_embeds is not None, "You should first execute `get_dense_vectors()`"
 
         if isinstance(query_or_dataset, str):
@@ -215,16 +214,16 @@ class HybridSearch:
 
     def get_relevant_doc(self, query: str, alpha: float, k: Optional[int] = 1) -> Tuple[List, List]:
         with timer("transform"):
-            # sparse_qvec = self.get_sparse_vectors([query])
+            sparse_qvec = self.get_sparse_vectors([query])
             dense_qvec = self.get_dense_vectors([query])
-        # assert sparse_qvec.nnz != 0, "Error: query contains no words in vocab."
+        assert sparse_qvec.nnz != 0, "Error: query contains no words in vocab."
 
         with timer("query ex search"):
-            tokenized_query = [self.tokenize_fn(query)]
-            sparse_score = np.array([self.sparse_embeder.get_scores(query) for query in tokenized_query])
-            # sparse_score = self.get_similarity_score(sparse_qvec, self.sparse_embeds)
-            dense_score = self.get_cosine_score(dense_qvec, self.dense_embeds)
-            # dense_score = self.get_similarity_score(dense_qvec, self.dense_embeds)
+            # tokenized_query = [self.tokenize_fn(query)]
+            # sparse_score = np.array([self.sparse_embeder.get_scores(query) for query in tokenized_query])
+            sparse_score = self.get_similarity_score(sparse_qvec, self.sparse_embeds)
+            # dense_score = self.get_cosine_score(dense_qvec, self.dense_embeds)
+            dense_score = self.get_similarity_score(dense_qvec, self.dense_embeds)
             result = self.hybrid_scale(dense_score.numpy(), sparse_score, alpha)
         sorted_result = np.argsort(result.squeeze())[::-1]
         doc_score = result.squeeze()[sorted_result].tolist()[:k]
@@ -234,15 +233,15 @@ class HybridSearch:
     def get_relevant_doc_bulk(
         self, queries: List[str], alpha: float, k: Optional[int] = 1
     ) -> Tuple[List, List]:
-        # sparse_qvec = self.get_sparse_vectors(queries)
+        sparse_qvec = self.get_sparse_vectors(queries)
         dense_qvec = self.get_dense_vectors(queries)
-        # assert sparse_qvec.nnz != 0, "Error: query contains no words in vocab."
+        assert sparse_qvec.nnz != 0, "Error: query contains no words in vocab."
         
-        tokenized_queries = [self.tokenize_fn(query) for query in queries]
-        sparse_score = np.array([self.sparse_embeder.get_scores(query) for query in tokenized_queries])
-        # sparse_score = self.get_similarity_score(sparse_qvec, self.sparse_embeds)
-        dense_score = self.get_cosine_score(dense_qvec, self.dense_embeds)
-        # dense_score = self.get_similarity_score(dense_qvec, self.dense_embeds)
+        # tokenized_queries = [self.tokenize_fn(query) for query in queries]
+        # sparse_score = np.array([self.sparse_embeder.get_scores(query) for query in tokenized_queries])
+        sparse_score = self.get_similarity_score(sparse_qvec, self.sparse_embeds)
+        # dense_score = self.get_cosine_score(dense_qvec, self.dense_embeds)
+        dense_score = self.get_similarity_score(dense_qvec, self.dense_embeds)
         result = self.hybrid_scale(dense_score.numpy(), sparse_score, alpha)
         doc_scores = []
         doc_indices = []
@@ -299,16 +298,16 @@ if __name__ == "__main__":
     query = "대통령을 포함한 미국의 행정부 견제권을 갖는 국가 기관은?"
 
     with timer("single query by exhaustive search using hybrid search"):
-        scores, contexts = retriever.retrieve(query, topk=5, alpha=0.7)
+        scores, contexts = retriever.retrieve(query, topk=5, alpha=0.1)
 
-    with timer("bulk query by exhaustive search using hybrid search"):
-        df = retriever.retrieve(full_ds, topk=5, alpha=0.7)
-        if 'original_context' in df.columns:
-            df["correct"] = df["original_context"] == df["context"]
-            print(
-                "Correct retrieval result by exhaustive search",
-                df["correct"].sum() / len(df),
-            )
-        else:
-            print("No original context to compare.")
+    # with timer("bulk query by exhaustive search using hybrid search"):
+    #     df = retriever.retrieve(full_ds, topk=5, alpha=0.9)
+    #     if 'original_context' in df.columns:
+    #         df["correct"] = df["original_context"] == df["context"]
+    #         print(
+    #             "Correct retrieval result by exhaustive search",
+    #             df["correct"].sum() / len(df),
+    #         )
+    #     else:
+    #         print("No original context to compare.")
 

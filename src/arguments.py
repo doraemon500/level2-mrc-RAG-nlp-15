@@ -11,7 +11,7 @@ class ModelArguments:
     # uomnf97/klue-roberta-finetuned-korquad-v2
     # HANTAEK/klue-roberta-large-korquad-v1-qa-finetuned
     model_name_or_path: str = field(
-        default="CurtisJeon/klue-roberta-large-korquad_v1_qa",
+        default="uomnf97/klue-roberta-finetuned-korquad-v2",
         metadata={
             "help": "Path to pretrained model or model identifier from huggingface.co/models"
         },

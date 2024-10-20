@@ -27,7 +27,9 @@ eval_dir="/data/ephemeral/home/level2-mrc-nlp-15/output/train_dataset_${current_
 # python inference_.py --output_dir $predict_dir --dataset_name $predict_dataset_name --model_name_or_path $train_dir --do_predict
 # python main.py --output_dir $predict_dir --dataset_name $predict_dataset_name --model_name_or_path $train_dir --alpha_retrieval 0.9 --do_predict
 # python src/main.py --output_dir /data/ephemeral/home/level2-mrc-nlp-15/output --dataset_name /data/ephemeral/home/level2-mrc-nlp-15/data/test_dataset --model_name_or_path /data/ephemeral/home/level2-mrc-nlp-15/models/train_20241017_101325 --do_predict
-python main.py --output_dir $predict_dir --dataset_name $predict_dataset_name --alpha_retrieval 0.9 --do_predict
+# python main.py --output_dir $predict_dir --dataset_name $predict_dataset_name --alpha_retrieval 0.1 --do_predict
+# python main.py --output_dir $predict_dir --dataset_name $predict_dataset_name --model_name_or_path $train_dir  --do_predict
+python main.py --output_dir $predict_dir --dataset_name $predict_dataset_name --do_predict
 # Print Done
 echo "All Done. Check the output in ${predict_dir}"
 
