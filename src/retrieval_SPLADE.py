@@ -33,6 +33,7 @@ class SpldRetrieval:
         self,
         data_path: Optional[str] = "../data/",
         context_path: Optional[str] = "wikipedia_documents.json",
+        corpus: Optional[pd.DataFrame] = None
     ) -> NoReturn:
         self.data_path = data_path
         with open(os.path.join(data_path, context_path), "r", encoding="utf-8") as f:
@@ -56,10 +57,6 @@ class SpldRetrieval:
 
     def get_sparse_embedding(self, df=None) -> NoReturn:
         if df is None:
-            # self.df = pd.DataFrame({
-            #     'text': self.contexts,
-            #     # 'id': self.ids
-            # })
             self.df = [{'id': i, 'text': c} for i, c in zip(self.ids, self.contexts)]
         else:
             self.df = df
@@ -82,7 +79,16 @@ class SpldRetrieval:
             k=100, # Number of documents to retrieve.
             batch_size=10
         )
-        return result
+
+        doc_scores = [] 
+        doc_indices = []
+        for i in range(len(result)):
+            doc_scores.append([dic['similarity'] for k, dic in enumerate(result[i]) if k < topk])
+            doc_indices.append([dic['id'] for k, dic in enumerate(result[i]) if k < topk])
+        for i in range(topk):
+            logging.info(f"Top-{i+1} passage with score {doc_scores[0][i]:4f}")
+            logging.info(self.contexts[doc_indices[0][i]])
+        return doc_scores, doc_indices
         
 
 if __name__ == "__main__":
@@ -120,11 +126,4 @@ if __name__ == "__main__":
     query = "대통령을 포함한 미국의 행정부 견제권을 갖는 국가 기관은?"
 
     with timer("single query by exhaustive search"):
-        results = retriever.retrieve(query, topk=1)
-    print(results)
-
-    # with timer("bulk query by exhaustive search"):
-    #     df = retriever.retrieve(full_ds, topk=1)
-    #     if "original_context" in df.columns:
-    #         df["correct"] = df["original_context"] == df["context"]
-    #         logging.info(f'correct retrieval result by exhaustive search: {df["correct"].sum() / len(df)}')
+        doc_scores, doc_indices = retriever.retrieve(query, topk=1)

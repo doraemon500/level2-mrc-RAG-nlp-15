@@ -11,7 +11,7 @@ class ModelArguments:
     # uomnf97/klue-roberta-finetuned-korquad-v2
     # HANTAEK/klue-roberta-large-korquad-v1-qa-finetuned
     model_name_or_path: str = field(
-        default="uomnf97/klue-roberta-finetuned-korquad-v2",
+        default="HANTAEK/klue-roberta-large-korquad-v1-qa-finetuned",
         metadata={
             "help": "Path to pretrained model or model identifier from huggingface.co/models"
         },
@@ -100,7 +100,7 @@ class DataTrainingArguments:
         default=64, metadata={"help": "Define how many clusters to use for faiss."}
     )
     top_k_retrieval: int = field(
-        default=20,
+        default=60,
         metadata={
             "help": "Define how many top-k passages to retrieve based on similarity."
         },

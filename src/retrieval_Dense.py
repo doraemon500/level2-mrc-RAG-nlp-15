@@ -35,6 +35,7 @@ class DenseRetrieval:
         self,
         data_path: Optional[str] = "../data/",
         context_path: Optional[str] = "wikipedia_documents.json",
+        corpus: Optional[pd.DataFrame] = None
     ) -> NoReturn:
         self.data_path = data_path
         with open(os.path.join(data_path, context_path), "r", encoding="utf-8") as f:
@@ -52,8 +53,20 @@ class DenseRetrieval:
         )
         self.dense_embeds = None
 
-    def get_dense_embedding(self, question=None):
-        if question is None:
+    def get_dense_embedding(self, question=None, contexts=None):
+        if contexts is not None:
+            self.contexts = contexts
+            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            self.dense_embeder.to(device)
+            encoded_input = self.tokenize_fn(
+                self.contexts, padding=True, truncation=True, return_tensors='pt'
+            ).to(device)
+            with torch.no_grad():
+                model_output = self.dense_embeder(**encoded_input)
+            sentence_embeddings = mean_pooling(model_output, encoded_input['attention_mask'])
+            self.dense_embeds = sentence_embeddings.cpu()
+
+        if question is None and contexts is None:
             pickle_name = "dense_without_normalize_embedding.bin"
             emd_path = os.path.join(self.data_path, pickle_name)
 
@@ -82,7 +95,7 @@ class DenseRetrieval:
                 self.dense_embeds = torch.cat(self.dense_embeds, dim=0)
                 torch.save(self.dense_embeds, emd_path)
                 print("Dense embeddings saved.")
-        else:
+        elif question is not None:
             device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
             self.dense_embeder.to(device)
             encoded_input = self.tokenize_fn(
@@ -146,11 +159,10 @@ class DenseRetrieval:
 
     def get_relevant_doc(self, query: str, k: Optional[int] = 1) -> Tuple[List, List]:
         with timer("transform"):
-            dense_qvec = self.get_dense_embedding([query])
+            dense_qvec = self.get_dense_embedding(question=[query])
 
         with timer("query ex search"):
             result = self.get_cosine_score(dense_qvec, self.dense_embeds)
-            print(result)
             # result = self.get_similarity_score(dense_qvec, self.dense_embeds)
         sorted_result = np.argsort(result.squeeze())[::-1]
         doc_score = result.squeeze()[sorted_result].tolist()[:k]
@@ -160,7 +172,7 @@ class DenseRetrieval:
     def get_relevant_doc_bulk(
         self, queries: List[str], k: Optional[int] = 1
     ) -> Tuple[List, List]:
-        dense_qvec = self.get_dense_embedding(queries)
+        dense_qvec = self.get_dense_embedding(question=queries)
         
         result = self.get_cosine_score(dense_qvec, self.dense_embeds)
         # result = self.get_similarity_score(dense_qvec, self.dense_embeds)
@@ -204,8 +216,9 @@ if __name__ == "__main__":
 
     retriever.get_dense_embedding()
 
-    query = "대통령을 포함한 미국의 행정부 견제권을 갖는 국가 기관은?"
-
+    # query = "대통령을 포함한 미국의 행정부 견제권을 갖는 국가 기관은?"
+    query = "유령은 어느 행성에서 지구로 왔는가?"
+    
     with timer("single query by exhaustive search"):
         scores, contexts = retriever.retrieve(query, topk=5)
 

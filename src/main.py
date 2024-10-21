@@ -19,6 +19,8 @@ from qa_trainer import QATrainer
 from retrieval_BM25 import BM25SparseRetrieval
 from retrieval_hybridsearch import HybridSearch
 from retrieval_Dense import DenseRetrieval
+from retrieval_2s_rerank import TwoStageReranker
+
 from transformers import (
     AutoConfig,
     AutoModelForQuestionAnswering,
@@ -158,22 +160,29 @@ def run_sparse_retrieval(
     context_path: str = "wikipedia_documents.json",
 ) -> DatasetDict:
 
-    # retriever = HybridSearch(
-    #     # tokenize_fn=tokenize_fn,
-    #     # args=data_args,  # args를 전달
-    #     data_path=data_path,
-    #     context_path=context_path
-    # )
-    # retriever.get_sparse_vectors()
-    # retriever.get_dense_vectors()
-
-    retriever = BM25SparseRetrieval(
+    retriever = HybridSearch(
         tokenize_fn=tokenize_fn,
-        args=data_args,  # args를 전달
+        # args=data_args,  # args를 전달
         data_path=data_path,
         context_path=context_path
     )
-    retriever.get_sparse_embedding()
+    retriever.get_sparse_vectors()
+    retriever.get_dense_vectors()
+
+    # retriever = BM25SparseRetrieval(
+    #     tokenize_fn=tokenize_fn,
+    #     args=data_args,  # args를 전달
+    #     data_path=data_path,
+    #     context_path=context_path
+    # )
+    # retriever.get_sparse_embedding()
+
+    # retriever = TwoStageReranker(
+    #     tokenize_fn=tokenize_fn,
+    #     args=data_args,  # args를 전달
+    #     data_path=data_path,
+    #     context_path=context_path
+    # )
     
     # retriever = DenseRetrieval(
     #     data_path=data_path,
@@ -187,9 +196,9 @@ def run_sparse_retrieval(
     #         datasets["validation"], topk=data_args.top_k_retrieval
     #     )
     # else:     
-    
-    df = retriever.retrieve(datasets["validation"], topk=data_args.top_k_retrieval)
-    # df = retriever.retrieve(datasets["validation"], topk=data_args.top_k_retrieval, alpha=data_args.alpha_retrieval)
+
+    # df = retriever.retrieve(datasets["validation"], topk=data_args.top_k_retrieval)
+    df = retriever.retrieve(datasets["validation"], topk=data_args.top_k_retrieval, alpha=data_args.alpha_retrieval)
 
 
     if training_args.do_predict:

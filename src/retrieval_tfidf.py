@@ -31,6 +31,7 @@ class TFIDFRetrieval:
         tokenize_fn,
         data_path: Optional[str] = "../data/",
         context_path: Optional[str] = "wikipedia_documents.json",
+        corpus: Optional[pd.DataFrame] = None
     ) -> NoReturn:
         self.data_path = data_path
         with open(os.path.join(data_path, context_path), "r", encoding="utf-8") as f:
@@ -257,7 +258,8 @@ if __name__ == "__main__":
         context_path=args.context_path,
     )
 
-    query = "대통령을 포함한 미국의 행정부 견제권을 갖는 국가 기관은?"
+    # query = "대통령을 포함한 미국의 행정부 견제권을 갖는 국가 기관은?"
+    query = "유령은 어느 행성에서 지구로 왔는가?"
 
     if args.use_faiss:
         with timer("single query by faiss"):
