@@ -19,7 +19,6 @@ from qa_trainer import QATrainer
 from retrieval_BM25 import BM25SparseRetrieval
 from transformers import (
     AutoConfig,
-    #AutoModelForQuestionAnswering,
     AutoTokenizer,
     DataCollatorWithPadding,
     EvalPrediction,
@@ -31,8 +30,7 @@ import wandb
 from CNN_layer_model import CNN_RobertaForQuestionAnswering
 
 logger = logging.getLogger(__name__)
-wandb.init(project="odqa",
-           name="run_" + (datetime.datetime.now() + datetime.timedelta(hours=9)).strftime("%Y%m%d_%H%M%S"))
+
 
 def main():
     parser = HfArgumentParser(
@@ -41,6 +39,14 @@ def main():
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
     training_args.save_steps = 0
     training_args.logging_steps = 10
+
+    project_prefix = "[train]" if training_args.do_train else "[eval]" if training_args.do_eval else "[pred]"
+    wandb.init(
+        project="odqa",
+        entity="nlp15",
+        name=f"{project_prefix} {model_args.model_name_or_path.split('/')[0]}_{(datetime.datetime.now() + datetime.timedelta(hours=9)).strftime('%Y%m%d_%H%M%S')}",
+        save_code=True,
+    )
 
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s -    %(message)s",

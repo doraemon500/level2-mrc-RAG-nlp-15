@@ -8,6 +8,7 @@ from transformers import RobertaPreTrainedModel
 from transformers.modeling_outputs import QuestionAnsweringModelOutput
 from transformers.models.roberta.modeling_roberta import RobertaModel
 
+
 class CNN_block(nn.Module):
     def __init__(self, input_size, hidden_size):
         super(CNN_block, self).__init__()
