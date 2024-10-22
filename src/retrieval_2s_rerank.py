@@ -37,7 +37,7 @@ class TwoStageReranker:
     def __init__(
         self,
         tokenize_fn,
-        args,
+        # args,
         data_path: Optional[str] = "../data/",
         context_path: Optional[str] = "wikipedia_documents.json",
     ) -> NoReturn:
@@ -51,7 +51,7 @@ class TwoStageReranker:
 
         self.sparse_embeder = BM25SparseRetrieval(
             tokenize_fn=tokenize_fn,
-            args=args,
+            # args=args,
             data_path=data_path,
             context_path=context_path
         )
@@ -70,10 +70,10 @@ class TwoStageReranker:
         return f_df
     
     def retireve_second(self, queries, topk: Optional[int] = 1, contexts=None):
-        # self.dense_embeder.get_dense_embedding(contexts=contexts)
-        # s_df = self.dense_embeder.retrieve(queries, topk=topk)
-        self.sparse_embeder.get_sparse_embedding(contexts=contexts)
-        s_df = self.sparse_embeder.retrieve(queries, topk=topk)
+        self.dense_embeder.get_dense_embedding(contexts=contexts)
+        s_df = self.dense_embeder.retrieve(queries, topk=topk)
+        # self.sparse_embeder.get_sparse_embedding(contexts=contexts)
+        # s_df = self.sparse_embeder.retrieve(queries, topk=topk)
         return s_df
 
     def retrieve(self, query_or_dataset, topk: Optional[int] = 1):

@@ -25,14 +25,12 @@ class BM25SparseRetrieval:
     def __init__(
         self, 
         tokenize_fn, 
-        args, 
         data_path: Optional[str] = "../data/", 
         context_path: Optional[str] = "wikipedia_documents.json",
         corpus: Optional[pd.DataFrame] = None
         ) -> None:
         self.tokenizer = tokenize_fn
         self.data_path = data_path
-        self.args = args 
         
         # 위키 문서 로드
         with open(os.path.join(data_path, context_path), "r", encoding="utf-8") as f:
@@ -175,11 +173,3 @@ if __name__ == "__main__":
         print(f"Top-{i} 의 문서입니다. ")
         print("---------------------------------------------")
         print(context)
-    # test bulk
-    # with timer("bulk query by exhaustive search using bm25"):
-    #     df = retriever.retrieve(full_ds)
-    #     df["correct"] = df["original_context"] == df["context"]
-    #     print(
-    #         "correct retrieval result by exhaustive search",
-    #         df["correct"].sum() / len(df),
-    #     )
