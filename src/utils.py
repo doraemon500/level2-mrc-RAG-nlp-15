@@ -10,7 +10,7 @@ import torch
 from arguments import DataTrainingArguments
 from datasets import DatasetDict
 from tqdm.auto import tqdm
-from transformers import PreTrainedTokenizerFast, TrainingArguments, is_torch_available
+from transformers import PreTrainedTokenizerFast, TrainingArguments
 from transformers.trainer_utils import get_last_checkpoint
 
 logger = logging.getLogger(__name__)
@@ -19,12 +19,12 @@ logger = logging.getLogger(__name__)
 def set_seed(seed: int = 42):
     random.seed(seed)
     np.random.seed(seed)
-    if is_torch_available():
-        torch.manual_seed(seed)
-        torch.cuda.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    torch.use_deterministic_algorithms(True)
 
 
 def postprocess_qa_predictions(
@@ -251,3 +251,258 @@ def check_no_error(
     if "validation" not in datasets:
         raise ValueError("--do_eval requires a validation dataset")
     return last_checkpoint, max_seq_length
+
+
+##-------------------------------------------------##
+
+# import collections
+# import json
+# import logging
+# import os
+# import re
+# import random
+# from typing import List, Optional, Tuple, Any
+
+# import numpy as np
+# import torch
+# from tqdm.auto import tqdm
+# from arguments import DataTrainingArguments
+# from datasets import DatasetDict
+# from tqdm.auto import tqdm
+# from transformers import PreTrainedTokenizerFast, TrainingArguments, is_torch_available
+# from transformers.trainer_utils import get_last_checkpoint
+
+# logger = logging.getLogger(__name__)
+
+# def set_seed(seed: int = 42):
+#     random.seed(seed)
+#     np.random.seed(seed)
+#     if is_torch_available():
+#         torch.manual_seed(seed)
+#         torch.cuda.manual_seed(seed)
+#         torch.cuda.manual_seed_all(seed)
+#         torch.backends.cudnn.deterministic = True
+#         torch.backends.cudnn.benchmark = False
+
+# def clean_answer(answer: str) -> str:
+#     # 앞뒤 공백 제거
+#     answer = answer.strip()
+    
+#     # 괄호와 그 내용 제거 (단, 괄호 안의 내용이 전체 답변인 경우는 유지)
+#     if not (answer.startswith('(') and answer.endswith(')')):
+#         answer = re.sub(r'\([^)]*\)', '', answer)
+    
+#     # 특수 문자 처리 (허용된 문자만 유지)
+#     answer = re.sub(r'[^가-힣a-zA-Z0-9\s.,?!]', '', answer)
+    
+#     # 다중 공백을 단일 공백으로 변경
+#     answer = re.sub(r'\s+', ' ', answer)
+    
+#     return answer.strip()
+
+# # def get_question_type(question: str) -> str:
+# #     question_lower = question.lower()
+# #     if any(word in question_lower for word in ['언제', '몇 년']):
+# #         return 'when'
+# #     elif any(word in question_lower for word in ['누구', '어느', '누가']):
+# #         return 'who'
+# #     elif any(word in question_lower for word in ['어디', '어느 곳']):
+# #         return 'where'
+# #     return 'other'
+
+# # def validate_answer(answer: str, question_type: str) -> float:
+# #     if question_type == 'when' and not re.search(r'\d+년|\d+월|\d+일|세기', answer):
+# #         return 0.6
+# #     elif question_type == 'who' and not re.search(r'[가-힣]{2,}|[A-Z][a-z]+', answer):
+# #         return 0.6
+# #     elif question_type == 'where' and not re.search(r'[가-힣]{2,}|[A-Z][a-z]+', answer):
+# #         return 0.6
+# #     return 1.0
+
+# def postprocess_qa_predictions(
+#     examples: dict,
+#     features: dict,
+#     predictions: Tuple[np.ndarray, np.ndarray],
+#     version_2_with_negative: bool = False,
+#     n_best_size: int = 20,
+#     max_answer_length: int = 30,
+#     null_score_diff_threshold: float = 0.0,
+#     output_dir: Optional[str] = None,
+#     prefix: Optional[str] = None,
+#     is_world_process_zero: bool = True,
+# ) -> dict:
+#     assert len(predictions) == 2, "`predictions` should be a tuple with two elements (start_logits, end_logits)."
+#     all_start_logits, all_end_logits = predictions
+
+#     assert len(predictions[0]) == len(features), f"Got {len(predictions[0])} predictions and {len(features)} features."
+
+#     # 예시 ID를 인덱스에 매핑
+#     example_id_to_index = {k: i for i, k in enumerate(examples["id"])}
+#     features_per_example = collections.defaultdict(list)
+#     for i, feature in enumerate(features):
+#         features_per_example[example_id_to_index[feature["example_id"]]].append(i)
+
+#     # 최종 예측 결과를 저장할 딕셔너리
+#     all_predictions = collections.OrderedDict()
+#     all_nbest_json = collections.OrderedDict()
+#     if version_2_with_negative:
+#         scores_diff_json = collections.OrderedDict()
+
+#     # 예측 로깅 설정
+#     logger.setLevel(logging.INFO if is_world_process_zero else logging.WARN)
+#     logger.info(f"Post-processing {len(examples)} example predictions split into {len(features)} features.")
+
+#     # 각 예시에 대해 처리
+#     for example_index, example in enumerate(tqdm(examples)):
+#         feature_indices = features_per_example[example_index]
+
+#         min_null_prediction = None
+#         prelim_predictions = []
+
+#         for feature_index in feature_indices:
+#             start_logits = all_start_logits[feature_index]
+#             end_logits = all_end_logits[feature_index]
+#             offset_mapping = features[feature_index]["offset_mapping"]
+#             token_is_max_context = features[feature_index].get("token_is_max_context", None)
+
+#             start_indexes = np.argsort(start_logits)[-1 : -n_best_size - 1 : -1].tolist()
+#             end_indexes = np.argsort(end_logits)[-1 : -n_best_size - 1 : -1].tolist()
+#             for start_index in start_indexes:
+#                 for end_index in end_indexes:
+#                     if (
+#                         start_index >= len(offset_mapping)
+#                         or end_index >= len(offset_mapping)
+#                         or offset_mapping[start_index] is None
+#                         or offset_mapping[end_index] is None
+#                     ):
+#                         continue
+#                     if end_index < start_index or end_index - start_index + 1 > max_answer_length:
+#                         continue
+#                     if token_is_max_context is not None and not token_is_max_context.get(str(start_index), False):
+#                         continue
+
+#                     prelim_predictions.append(
+#                         {
+#                             "offsets": (offset_mapping[start_index][0], offset_mapping[end_index][1]),
+#                             "score": start_logits[start_index] + end_logits[end_index],
+#                             "start_logit": start_logits[start_index],
+#                             "end_logit": end_logits[end_index],
+#                         }
+#                     )
+
+#         # 예측 결과 후처리
+#         context = example["context"]
+#         # question_type = get_question_type(example["question"])
+#         for pred in prelim_predictions:
+#             offsets = pred['offsets']
+#             pred['text'] = clean_answer(context[offsets[0]: offsets[1]])
+            
+#             # 답변 길이에 따른 가중치 부여
+#             length_score = 1.0
+#             # if 1 <= len(pred['text']) <= 1:
+#             #     length_score = 1.5  # 2-13글자 답변 선호 (50% 가점)
+#             # elif 9 <= len(pred['text']) <= 20:
+#             #     length_score = 1.0  # 14-20글자 답변도 어느 정도 선호
+#             # elif 20 < len(pred['text']) <= 30:
+#             #     length_score = 0.5  # 불이익
+#             # else:
+#             #     length_score = 0.3  # 30글자 초과 답변 불이익
+            
+#             # 질문 유형에 따른 답변 검증
+#             type_score = 1.0 # validate_answer(pred['text'], question_type)
+            
+#             # 최종 점수 계산
+#             pred['score'] *= length_score * type_score
+
+#         # 중복 답변 처리
+#         seen_answers = {}
+#         filtered_predictions = []
+#         for pred in sorted(prelim_predictions, key=lambda x: x['score'], reverse=True):
+#             if pred['text'] not in seen_answers:
+#                 seen_answers[pred['text']] = True
+#                 filtered_predictions.append(pred)
+#             if len(filtered_predictions) >= n_best_size:
+#                 break
+
+#         # 최종 예측 결과 선택
+#         if len(filtered_predictions) == 0:
+#             all_predictions[example["id"]] = ""
+#         else:
+#             best_pred = filtered_predictions[0]
+#             all_predictions[example["id"]] = best_pred["text"]
+
+#         # n-best 예측 결과 저장
+#         all_nbest_json[example["id"]] = [
+#             {
+#                 "text": pred["text"],
+#                 "score": float(pred["score"]),
+#                 "start_logit": float(pred["start_logit"]),
+#                 "end_logit": float(pred["end_logit"]),
+#             }
+#             for pred in filtered_predictions
+#         ]
+
+#     # 결과 저장
+#     if output_dir is not None:
+#         assert os.path.isdir(output_dir), f"{output_dir} is not a directory."
+
+#         prediction_file = os.path.join(
+#             output_dir,
+#             "predictions.json" if prefix is None else f"predictions_{prefix}.json"
+#         )
+#         nbest_file = os.path.join(
+#             output_dir,
+#             "nbest_predictions.json" if prefix is None else f"nbest_predictions_{prefix}.json"
+#         )
+
+#         logger.info(f"Saving predictions to {prediction_file}")
+#         with open(prediction_file, "w", encoding="utf-8") as writer:
+#             writer.write(json.dumps(all_predictions, indent=4, ensure_ascii=False) + "\n")
+#         logger.info(f"Saving nbest_preds to {nbest_file}")
+#         with open(nbest_file, "w", encoding="utf-8") as writer:
+#             writer.write(json.dumps(all_nbest_json, indent=4, ensure_ascii=False) + "\n")
+
+#     return all_predictions
+
+
+# def check_no_error(
+#     data_args: DataTrainingArguments,
+#     training_args: TrainingArguments,
+#     datasets: DatasetDict,
+#     tokenizer,
+# ) -> Tuple[Any, int]:
+#     last_checkpoint = None
+#     if (
+#         os.path.isdir(training_args.output_dir)
+#         and training_args.do_train
+#         and not training_args.overwrite_output_dir
+#     ):
+#         last_checkpoint = get_last_checkpoint(training_args.output_dir)
+#         if last_checkpoint is None and len(os.listdir(training_args.output_dir)) > 0:
+#             raise ValueError(
+#                 f"Output directory ({training_args.output_dir}) already exists and is not empty. "
+#                 "Use --overwrite_output_dir to overcome."
+#             )
+#         elif last_checkpoint is not None:
+#             logger.info(
+#                 f"Checkpoint detected, resuming training at {last_checkpoint}. To avoid this behavior, change "
+#                 "the `--output_dir` or add `--overwrite_output_dir` to train from scratch."
+#             )
+
+#     if not isinstance(tokenizer, PreTrainedTokenizerFast):
+#         raise ValueError(
+#             "This example script only works for models that have a fast tokenizer. Checkout the big table of models "
+#             "at https://huggingface.co/transformers/index.html#bigtable to find the model types that meet this "
+#             "requirement"
+#         )
+
+#     if data_args.max_seq_length > tokenizer.model_max_length:
+#         logger.warning(
+#             f"The max_seq_length passed ({data_args.max_seq_length}) is larger than the maximum length for the"
+#             f"model ({tokenizer.model_max_length}). Using max_seq_length={tokenizer.model_max_length}."
+#         )
+#     max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
+
+#     if "validation" not in datasets:
+#         raise ValueError("--do_eval requires a validation dataset")
+#     return last_checkpoint, max_seq_length
