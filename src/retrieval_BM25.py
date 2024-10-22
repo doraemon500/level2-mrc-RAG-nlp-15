@@ -9,10 +9,13 @@ import argparse
 import numpy as np
 import pandas as pd
 from datasets import Dataset, concatenate_datasets, load_from_disk
-from rank_bm25 import BM25Okapi
+from rank_bm25 import BM25Plus
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer
 
+from utils import set_seed
+
+set_seed(42)
 
 @contextmanager
 def timer(name):
@@ -22,39 +25,25 @@ def timer(name):
 
 
 class BM25SparseRetrieval:
-    def __init__(
-        self,
-        tokenize_fn,
-        args,
-        data_path: Optional[str] = "../data/",
-        context_path: Optional[str] = "wikipedia_documents.json",
-    ) -> None:
-        """Arguments:
-            tokenize_fn:
-                기본 text를 tokenize해주는 함수입니다.
-
-            data_path:
-                데이터가 보관되어 있는 경로입니다.
-
-            context_path:
-                Passage들이 묶여있는 파일명입니다.
-        """
-
+    def __init__(self, tokenize_fn, args, data_path: Optional[str] = "../data/", context_path: Optional[str] = "wikipedia_documents.json") -> None:
+        set_seed(42)
         self.tokenizer = tokenize_fn
         self.data_path = data_path
-        self.args = args
+        self.args = args 
         
+        # 위키 문서 로드
         with open(os.path.join(data_path, context_path), "r", encoding="utf-8") as f:
             wiki = json.load(f)
 
         self.contexts = list(dict.fromkeys([v["text"] for v in wiki.values()]))
         print(f"Lengths of unique contexts : {len(self.contexts)}")
         
-        self.bm25 = None  # get_sparse_embedding()로 생성합니다
+        self.bm25 = None   
+
 
     def get_sparse_embedding(self) -> None:
-        """Passage Embedding을 만들고 BM25를 초기화합니다."""
-        pickle_name = "bm25_sparse_embedding.bin"
+        """BM25+로 Passage Embedding을 만들고 초기화합니다."""
+        pickle_name = "bm25plus_sparse_embedding_optuna.bin"
         emd_path = os.path.join(self.data_path, pickle_name)
 
         if os.path.isfile(emd_path):
@@ -64,21 +53,13 @@ class BM25SparseRetrieval:
         else:
             print("Build passage embedding")
             tokenized_corpus = [self.tokenizer(doc) for doc in self.contexts]
-            self.bm25 = BM25Okapi(tokenized_corpus)
+            self.bm25 = BM25Plus(tokenized_corpus, k1=1.7595, b=0.9172, delta=1.1490)  # BM25Plus로 변경 후 하이퍼파라미터 Optuna test1 적용
             with open(emd_path, "wb") as file:
                 pickle.dump(self.bm25, file)
             print("Embedding pickle saved.")
 
-    def retrieve(
-        self, query_or_dataset: Union[str, Dataset], topk: Optional[int] = 1,
-    ) -> Union[Tuple[List, List], pd.DataFrame]:
-        """Arguments:
-            query_or_dataset (Union[str, Dataset]):
-                str이나 Dataset으로 이루어진 Query를 받습니다.
-            topk (Optional[int], optional): Defaults to 1.
-                상위 몇 개의 passage를 사용할 것인지 지정합니다.
-        """
 
+    def retrieve(self, query_or_dataset: Union[str, Dataset], topk: Optional[int] = 1) -> Union[Tuple[List, List], pd.DataFrame]:
         assert self.bm25 is not None, "get_sparse_embedding() 메소드를 먼저 수행해줘야합니다."
 
         if isinstance(query_or_dataset, str):
@@ -94,10 +75,8 @@ class BM25SparseRetrieval:
         elif isinstance(query_or_dataset, Dataset):
             # Retrieve한 Passage를 pd.DataFrame으로 반환합니다.
             with timer("query exhaustive search"):
-                doc_scores, doc_indices = self.get_relevant_doc_bulk(
-                    query_or_dataset["question"], k=topk
-                )
-                
+                doc_scores, doc_indices = self.get_relevant_doc_bulk(query_or_dataset["question"], k=topk)
+
             total = []
             for idx, example in enumerate(tqdm(query_or_dataset, desc="Sparse retrieval: ")):
                 tmp = {
@@ -110,16 +89,11 @@ class BM25SparseRetrieval:
                     tmp["answers"] = example["answers"]
                 total.append(tmp)
 
-            return pd.DataFrame(total)
+            return pd.DataFrame(total)    
+        
 
     def get_relevant_doc(self, query: str, k: Optional[int] = 1) -> Tuple[List, List]:
-        """Arguments:
-            query (str):
-                하나의 Query를 받습니다.
-            k (Optional[int]): 1
-                상위 몇 개의 Passage를 반환할지 정합니다.
-        """
-
+        """개별 질의에 대한 상위 k개의 Passage 검색"""
         tokenized_query = [self.tokenizer(query)]
         result = np.array([self.bm25.get_scores(query) for query in tokenized_query])
         doc_scores = []
@@ -132,16 +106,9 @@ class BM25SparseRetrieval:
         
         return doc_scores, doc_indices
 
-    def get_relevant_doc_bulk(
-        self, queries: List, k: Optional[int] = 1
-    ) -> Tuple[List, List]:
-        """Arguments:
-            queries (List):
-                여러 개의 Query를 받습니다.
-            k (Optional[int]): 1
-                상위 몇 개의 Passage를 반환할지 정합니다.
-        """
 
+    def get_relevant_doc_bulk(self, queries: List, k: Optional[int] = 1) -> Tuple[List, List]:
+        """여러 개의 Query를 받아 상위 k개의 Passage 검색"""
         tokenized_queries = [self.tokenizer(query) for query in queries]
         result = np.array([self.bm25.get_scores(query) for query in tokenized_queries])
         doc_scores = []

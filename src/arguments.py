@@ -7,21 +7,22 @@ class ModelArguments:
     """
     Arguments pertaining to which model/config/tokenizer we are going to fine-tune from.
     """
-
+    # CurtisJeon/klue-roberta-large-korquad_v1_qa
+    # uomnf97/klue-roberta-finetuned-korquad-v2
     model_name_or_path: str = field(
-        default="klue/roberta-large",
+        default="CurtisJeon/klue-roberta-large-korquad_v1_qa",
         metadata={
             "help": "Path to pretrained model or model identifier from huggingface.co/models"
         },
     )
     config_name: Optional[str] = field(
-        default="klue/roberta-large",
+        default=None,
         metadata={
             "help": "Pretrained config name or path if not the same as model_name"
         },
     )
     config_name_dpr: Optional[str] = field(
-        default='klue/roberta-large',
+        default=None,
         metadata={
             "help": "Pretrained config name or path if not the same as model_name"
         },
@@ -116,4 +117,12 @@ class DataTrainingArguments:
     
     remove_char: bool = field(
         default=True, metadata={"help": "Whether to remove special character before embedding"}
+    )
+    data_path: str = field(
+        default="../data/",
+        metadata={"help": "The path of the data directory"},
+    )
+    context_path: str = field(
+        default="wikipedia_documents.json",
+        metadata={"help": "The name of the context file"},
     )

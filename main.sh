@@ -10,7 +10,7 @@ predict_dataset_name="/data/ephemeral/home/level2-mrc-nlp-15/data/test_dataset"
 cd /data/ephemeral/home/level2-mrc-nlp-15/src
 
 # Perform training
-python main.py --output_dir $train_dir --do_train
+python main.py --output_dir $train_dir --do_train --overwrite_output_dir --per_device_train_batch_size 16 --learning_rate 1e-5 --num_train_epochs 3
 
 # # Perform evaluation (optional)
 # eval_dir="/data/ephemeral/home/level2-mrc-nlp-15/output/train_dataset_${current_time}"

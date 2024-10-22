@@ -19,7 +19,7 @@ from qa_trainer import QATrainer
 from retrieval_BM25 import BM25SparseRetrieval
 from transformers import (
     AutoConfig,
-    AutoModelForQuestionAnswering,
+    #AutoModelForQuestionAnswering,
     AutoTokenizer,
     DataCollatorWithPadding,
     EvalPrediction,
@@ -28,6 +28,7 @@ from transformers import (
 )
 from utils import set_seed, check_no_error, postprocess_qa_predictions
 import wandb
+from CNN_layer_model import CNN_RobertaForQuestionAnswering
 
 logger = logging.getLogger(__name__)
 wandb.init(project="odqa",
@@ -39,6 +40,7 @@ def main():
     )
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
     training_args.save_steps = 0
+    training_args.logging_steps = 10
 
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s -    %(message)s",
@@ -52,6 +54,8 @@ def main():
     logger.info("Training/evaluation parameters %s", training_args)
 
     set_seed(training_args.seed)
+    print(">>> seed:", training_args.seed)
+
 
     datasets = load_from_disk(data_args.dataset_name)
     print(datasets)
@@ -67,7 +71,7 @@ def main():
         else model_args.model_name_or_path,
         use_fast=True,
     )
-    model = AutoModelForQuestionAnswering.from_pretrained(
+    model = CNN_RobertaForQuestionAnswering.from_pretrained(
         model_args.model_name_or_path,
         from_tf=bool(".ckpt" in model_args.model_name_or_path),
         config=config,
