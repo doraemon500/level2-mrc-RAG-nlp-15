@@ -82,6 +82,11 @@ def main():
         else model_args.model_name_or_path,
         use_fast=True,
     )
+    # tokenizer = AutoTokenizer.from_pretrained(
+    #     "Jinhwan/krelectra-base-mecab",
+    #     use_fast=True,
+    # )
+
     model = CNN_RobertaForQuestionAnswering.from_pretrained(
         model_args.model_name_or_path,
         from_tf=bool(".ckpt" in model_args.model_name_or_path),
