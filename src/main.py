@@ -326,6 +326,7 @@ def run_mrc(
         formatted_predictions = [
             {"id": k, "prediction_text": v} for k, v in predictions.items()
         ]
+
         if training_args.do_predict:
             return formatted_predictions
 
@@ -381,12 +382,6 @@ def run_mrc(
 
     logger.info("*** Evaluate ***")
 
-    if training_args.do_predict:
-        predictions = trainer.predict(
-            test_dataset=eval_dataset, test_examples=datasets["validation"]
-        )
-        logger.info("No metric can be presented because there is no correct answer given. Job done!")
-
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
         metrics = trainer.evaluate()
@@ -395,6 +390,12 @@ def run_mrc(
 
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
+
+    if training_args.do_predict:
+        predictions = trainer.predict(
+            test_dataset=eval_dataset, test_examples=datasets["validation"]
+        )
+        logger.info("No metric can be presented because there is no correct answer given. Job done!")
 
 
 if __name__ == "__main__":
