@@ -10,7 +10,7 @@ class ModelArguments:
     # CurtisJeon/klue-roberta-large-korquad_v1_qa
     # uomnf97/klue-roberta-finetuned-korquad-v2
     model_name_or_path: str = field(
-        default="CurtisJeon/klue-roberta-large-korquad_v1_qa",
+        default="uomnf97/klue-roberta-finetuned-korquad-v2",
         metadata={
             "help": "Path to pretrained model or model identifier from huggingface.co/models"
         },
@@ -67,7 +67,7 @@ class DataTrainingArguments:
         },
     )
     max_seq_length: int = field(
-        default=512,
+        default=384,
         metadata={
             "help": "The maximum total input sequence length after tokenization. Sequences longer "
             "than this will be truncated, sequences shorter will be padded."
