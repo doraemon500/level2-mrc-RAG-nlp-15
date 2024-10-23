@@ -1,7 +1,4 @@
 from transformers import Trainer, is_datasets_available
-from utils import set_seed
-
-set_seed(42)
 
 if is_datasets_available():
     import datasets

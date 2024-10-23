@@ -32,12 +32,9 @@ from transformers import (
 )
 from utils import set_seed, check_no_error, postprocess_qa_predictions
 import wandb
+from CNN_layer_model import CNN_RobertaForQuestionAnswering
 
 logger = logging.getLogger(__name__)
-wandb.init(project="odqa",
-           name="run_" + (datetime.datetime.now() + datetime.timedelta(hours=9)).strftime("%Y%m%d_%H%M%S"),
-           entity="nlp15"
-           )
 
 
 def main():
@@ -46,6 +43,15 @@ def main():
     )
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
     training_args.save_steps = 0
+    training_args.logging_steps = 10
+
+    project_prefix = "[train]" if training_args.do_train else "[eval]" if training_args.do_eval else "[pred]"
+    wandb.init(
+        project="odqa",
+        entity="nlp15",
+        name=f"{project_prefix} {model_args.model_name_or_path.split('/')[0]}_{(datetime.datetime.now() + datetime.timedelta(hours=9)).strftime('%Y%m%d_%H%M%S')}",
+        save_code=True,
+    )
 
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s -    %(message)s",
@@ -59,6 +65,8 @@ def main():
     logger.info("Training/evaluation parameters %s", training_args)
 
     set_seed(training_args.seed)
+    print(">>> seed:", training_args.seed)
+
 
     datasets = load_from_disk(data_args.dataset_name)
     print(datasets)
@@ -74,7 +82,7 @@ def main():
         else model_args.model_name_or_path,
         use_fast=True,
     )
-    model = AutoModelForQuestionAnswering.from_pretrained(
+    model = CNN_RobertaForQuestionAnswering.from_pretrained(
         model_args.model_name_or_path,
         from_tf=bool(".ckpt" in model_args.model_name_or_path),
         config=config,
@@ -182,7 +190,7 @@ def run_sparse_retrieval(
     #     data_path=data_path,
     #     context_path=context_path
     # )
-    
+
     # retriever = DenseRetrieval(
     #     data_path=data_path,
     #     context_path=context_path
@@ -194,7 +202,7 @@ def run_sparse_retrieval(
     #     df = retriever.retrieve_faiss(
     #         datasets["validation"], topk=data_args.top_k_retrieval
     #     )
-    # else:     
+    # else:
 
     # df = retriever.retrieve(datasets["validation"], topk=data_args.top_k_retrieval)
     # df = retriever.retrieve(datasets["validation"], topk=data_args.top_k_retrieval, alpha=data_args.alpha_retrieval)
@@ -348,6 +356,7 @@ def run_mrc(
         formatted_predictions = [
             {"id": k, "prediction_text": v} for k, v in predictions.items()
         ]
+
         if training_args.do_predict:
             return formatted_predictions
 
@@ -403,12 +412,6 @@ def run_mrc(
 
     logger.info("*** Evaluate ***")
 
-    if training_args.do_predict:
-        predictions = trainer.predict(
-            test_dataset=eval_dataset, test_examples=datasets["validation"]
-        )
-        logger.info("No metric can be presented because there is no correct answer given. Job done!")
-
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
         metrics = trainer.evaluate()
@@ -418,7 +421,12 @@ def run_mrc(
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
 
+    if training_args.do_predict:
+        predictions = trainer.predict(
+            test_dataset=eval_dataset, test_examples=datasets["validation"]
+        )
+        logger.info("No metric can be presented because there is no correct answer given. Job done!")
+
 
 if __name__ == "__main__":
     main()
-

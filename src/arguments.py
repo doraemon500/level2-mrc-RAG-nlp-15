@@ -9,9 +9,8 @@ class ModelArguments:
     """
     # CurtisJeon/klue-roberta-large-korquad_v1_qa
     # uomnf97/klue-roberta-finetuned-korquad-v2
-    # HANTAEK/klue-roberta-large-korquad-v1-qa-finetuned
     model_name_or_path: str = field(
-        default="HANTAEK/klue-roberta-large-korquad-v1-qa-finetuned",
+        default="uomnf97/klue-roberta-finetuned-korquad-v2",
         metadata={
             "help": "Path to pretrained model or model identifier from huggingface.co/models"
         },
@@ -54,18 +53,24 @@ class DataTrainingArguments:
 
     dataset_name: Optional[str] = field(
         default="../data/train_dataset",
-        metadata={"help": "The name of the dataset to use."},
+        metadata={
+            "help": "The name of the dataset to use."
+        },
     )
     overwrite_cache: bool = field(
         default=False,
-        metadata={"help": "Overwrite the cached training and evaluation sets"},
+        metadata={
+            "help": "Overwrite the cached training and evaluation sets"
+        },
     )
     preprocessing_num_workers: Optional[int] = field(
         default=None,
-        metadata={"help": "The number of processes to use for the preprocessing."},
+        metadata={
+            "help": "The number of processes to use for the preprocessing."
+        },
     )
     max_seq_length: int = field(
-        default=512,
+        default=384,
         metadata={
             "help": "The maximum total input sequence length after tokenization. Sequences longer "
             "than this will be truncated, sequences shorter will be padded."
@@ -94,10 +99,14 @@ class DataTrainingArguments:
     )
     eval_retrieval: bool = field(
         default=True,
-        metadata={"help": "Whether to run passage retrieval using sparse embedding."},
+        metadata={
+        "help": "Whether to run passage retrieval using sparse embedding."
+        },
     )
     num_clusters: int = field(
-        default=64, metadata={"help": "Define how many clusters to use for faiss."}
+        default=64, metadata={
+            "help": "Define how many clusters to use for faiss."
+        },
     )
     top_k_retrieval: int = field(
         default=20,
@@ -106,26 +115,31 @@ class DataTrainingArguments:
         },
     )
     use_faiss: bool = field(
-        default=True, metadata={"help": "Whether to build with faiss"}
+        default=True, metadata={
+            "help": "Whether to build with faiss"
+        },
     )
-    # save_total_limit: int = field(
-    #     default = 1,
-    #     metadata = {"help" : "Number of save model checkpoint"}
-    # )
     dense_encoder_type: str = field(
-        default = 'hybrid', metadata = {"help": "Whether to run passage retrieval using dense embedding."}
+        default = 'hybrid', metadata = {
+            "help": "Whether to run passage retrieval using dense embedding."
+        },
     )
-    
     remove_char: bool = field(
-        default=True, metadata={"help": "Whether to remove special character before embedding"}
+        default=True, metadata={
+            "help": "Whether to remove special character before embedding"
+        },
     )
     data_path: str = field(
         default="../data/",
-        metadata={"help": "The path of the data directory"},
+        metadata={
+            "help": "The path of the data directory"
+        },
     )
     context_path: str = field(
         default="wikipedia_documents.json",
-        metadata={"help": "The name of the context file"},
+        metadata={
+            "help": "The name of the context file"
+        },
     )
     alpha_retrieval: Optional[float] = field(
         default=0.7,
