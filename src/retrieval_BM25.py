@@ -13,6 +13,9 @@ from rank_bm25 import BM25Plus
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer
 
+from utils import set_seed
+
+set_seed(42)
 
 @contextmanager
 def timer(name):
@@ -22,16 +25,19 @@ def timer(name):
 
 
 class BM25SparseRetrieval:
+    def __init__(self, tokenize_fn, args, data_path: Optional[str] = "../data/", context_path: Optional[str] = "wikipedia_documents.json") -> None:
+        set_seed(42)
     def __init__(
-        self, 
-        tokenize_fn, 
-        data_path: Optional[str] = "../data/", 
+        self,
+        tokenize_fn,
+        data_path: Optional[str] = "../data/",
         context_path: Optional[str] = "wikipedia_documents.json",
         corpus: Optional[pd.DataFrame] = None
         ) -> None:
         self.tokenizer = tokenize_fn
         self.data_path = data_path
-        
+        self.args = args
+
         # 위키 문서 로드
         with open(os.path.join(data_path, context_path), "r", encoding="utf-8") as f:
             wiki = json.load(f)
@@ -39,7 +45,7 @@ class BM25SparseRetrieval:
         self.contexts = list(dict.fromkeys([v["text"] for v in wiki.values()]))
         print(f"Lengths of unique contexts : {len(self.contexts)}")
         
-        self.bm25 = None   
+        self.bm25 = None
 
 
     def get_sparse_embedding(self, contexts=None) -> None:
@@ -95,7 +101,7 @@ class BM25SparseRetrieval:
                 total.append(tmp)
 
             return pd.DataFrame(total)
-        
+
 
     def get_relevant_doc(self, query: str, k: Optional[int] = 1) -> Tuple[List, List]:
         """개별 질의에 대한 상위 k개의 Passage 검색"""
