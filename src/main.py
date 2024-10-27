@@ -17,8 +17,13 @@ from datasets import (
 )
 from qa_trainer import QATrainer
 from retrieval_BM25 import BM25SparseRetrieval
+from retrieval_hybridsearch import HybridSearch
+from retrieval_Dense import DenseRetrieval
+from retrieval_2s_rerank import TwoStageReranker
+
 from transformers import (
     AutoConfig,
+    AutoModelForQuestionAnswering,
     AutoTokenizer,
     DataCollatorWithPadding,
     EvalPrediction,
@@ -77,6 +82,11 @@ def main():
         else model_args.model_name_or_path,
         use_fast=True,
     )
+    # tokenizer = AutoTokenizer.from_pretrained(
+    #     "Jinhwan/krelectra-base-mecab",
+    #     use_fast=True,
+    # )
+
     model = CNN_RobertaForQuestionAnswering.from_pretrained(
         model_args.model_name_or_path,
         from_tf=bool(".ckpt" in model_args.model_name_or_path),
@@ -163,13 +173,34 @@ def run_sparse_retrieval(
     context_path: str = "wikipedia_documents.json",
 ) -> DatasetDict:
 
-    retriever = BM25SparseRetrieval(
+    retriever = HybridSearch(
         tokenize_fn=tokenize_fn,
-        args=data_args,  # args를 전달
+        # args=data_args,  # args를 전달
         data_path=data_path,
         context_path=context_path
     )
     retriever.get_sparse_embedding()
+    retriever.get_dense_embedding()
+
+    # retriever = BM25SparseRetrieval(
+    #     tokenize_fn=tokenize_fn,
+    #     data_path=data_path,
+    #     context_path=context_path
+    # )
+    # retriever.get_sparse_embedding()
+
+    # retriever = TwoStageReranker(
+    #     tokenize_fn=tokenize_fn,
+    #     args=data_args,  # args를 전달
+    #     data_path=data_path,
+    #     context_path=context_path
+    # )
+
+    # retriever = DenseRetrieval(
+    #     data_path=data_path,
+    #     context_path=context_path
+    # )
+    # retriever.get_dense_embedding()
 
     # if data_args.use_faiss:
     #     retriever.build_faiss(num_clusters=data_args.num_clusters)
@@ -177,7 +208,11 @@ def run_sparse_retrieval(
     #         datasets["validation"], topk=data_args.top_k_retrieval
     #     )
     # else:
-    df = retriever.retrieve(datasets["validation"], topk=data_args.top_k_retrieval)
+
+    # df = retriever.retrieve(datasets["validation"], topk=data_args.top_k_retrieval)
+    # df = retriever.retrieve(datasets["validation"], topk=data_args.top_k_retrieval, alpha=data_args.alpha_retrieval)
+    df = retriever.retrieve(datasets["validation"], topk=10, alpha=0.7)
+
 
     if training_args.do_predict:
         f = Features(
@@ -326,6 +361,7 @@ def run_mrc(
         formatted_predictions = [
             {"id": k, "prediction_text": v} for k, v in predictions.items()
         ]
+
         if training_args.do_predict:
             return formatted_predictions
 
@@ -381,12 +417,6 @@ def run_mrc(
 
     logger.info("*** Evaluate ***")
 
-    if training_args.do_predict:
-        predictions = trainer.predict(
-            test_dataset=eval_dataset, test_examples=datasets["validation"]
-        )
-        logger.info("No metric can be presented because there is no correct answer given. Job done!")
-
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
         metrics = trainer.evaluate()
@@ -395,6 +425,12 @@ def run_mrc(
 
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
+
+    if training_args.do_predict:
+        predictions = trainer.predict(
+            test_dataset=eval_dataset, test_examples=datasets["validation"]
+        )
+        logger.info("No metric can be presented because there is no correct answer given. Job done!")
 
 
 if __name__ == "__main__":
