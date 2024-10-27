@@ -25,12 +25,13 @@ def timer(name):
     logging.info(f"[{name}] done in {time.time() - t0:.3f} s")
 
 
-class SparseRetrieval:
+class TFIDFRetrieval:
     def __init__(
         self,
         tokenize_fn,
         data_path: Optional[str] = "../data/",
         context_path: Optional[str] = "wikipedia_documents.json",
+        corpus: Optional[pd.DataFrame] = None
     ) -> NoReturn:
         set_seed(42)
         self.data_path = data_path
@@ -252,13 +253,14 @@ if __name__ == "__main__":
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path, use_fast=False,)
 
-    retriever = SparseRetrieval(
+    retriever = TFIDFRetrieval(
         tokenize_fn=tokenizer.tokenize,
         data_path=args.data_path,
         context_path=args.context_path,
     )
 
-    query = "대통령을 포함한 미국의 행정부 견제권을 갖는 국가 기관은?"
+    # query = "대통령을 포함한 미국의 행정부 견제권을 갖는 국가 기관은?"
+    query = "유령은 어느 행성에서 지구로 왔는가?"
 
     if args.use_faiss:
         with timer("single query by faiss"):

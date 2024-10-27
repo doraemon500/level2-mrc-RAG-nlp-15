@@ -9,7 +9,8 @@ current_time = datetime.utcnow() + timedelta(hours=9)
 current_time_str = current_time.strftime('%Y%m%d_%H%M%S')
 
 # Root directory (adjust this if necessary)
-root_dir = os.path.join(os.sep, 'data', 'ephemeral', 'home', 'level2-mrc-nlp-15')
+root_dir = os.getcwd()
+#root_dir = os.path.join(os.sep, 'data', 'ephemeral', 'home', 'level2-mrc-nlp-15')
 
 # Ensure root directory exists
 if not os.path.exists(root_dir):
