@@ -17,6 +17,10 @@ from datasets import (
 )
 from qa_trainer import QATrainer
 from retrieval_BM25 import BM25SparseRetrieval
+from retrieval_hybridsearch import HybridSearch
+from retrieval_Dense import DenseRetrieval
+from retrieval_2s_rerank import TwoStageReranker
+
 from transformers import (
     AutoConfig,
     #AutoModelForQuestionAnswering
@@ -31,8 +35,7 @@ import wandb
 from CNN_layer_model import CNN_RobertaForQuestionAnswering
 
 logger = logging.getLogger(__name__)
-wandb.init(project="odqa",
-           name="run_" + (datetime.datetime.now() + datetime.timedelta(hours=9)).strftime("%Y%m%d_%H%M%S"))
+
 
 def main():
     parser = HfArgumentParser(
@@ -40,6 +43,15 @@ def main():
     )
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
     training_args.save_steps = 0
+    training_args.logging_steps = 10
+
+    project_prefix = "[train]" if training_args.do_train else "[eval]" if training_args.do_eval else "[pred]"
+    wandb.init(
+        project="odqa",
+        entity="nlp15",
+        name=f"{project_prefix} {model_args.model_name_or_path.split('/')[0]}_{(datetime.datetime.now() + datetime.timedelta(hours=9)).strftime('%Y%m%d_%H%M%S')}",
+        save_code=True,
+    )
 
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s -    %(message)s",
@@ -53,6 +65,8 @@ def main():
     logger.info("Training/evaluation parameters %s", training_args)
 
     set_seed(training_args.seed)
+    print(">>> seed:", training_args.seed)
+
 
     datasets = load_from_disk(data_args.dataset_name)
     print(datasets)
@@ -155,13 +169,34 @@ def run_sparse_retrieval(
     context_path: str = "wikipedia_documents.json",
 ) -> DatasetDict:
 
-    retriever = BM25SparseRetrieval(
+    retriever = HybridSearch(
         tokenize_fn=tokenize_fn,
-        args=data_args,  # args를 전달
+        # args=data_args,  # args를 전달
         data_path=data_path,
         context_path=context_path
     )
     retriever.get_sparse_embedding()
+    retriever.get_dense_embedding()
+
+    # retriever = BM25SparseRetrieval(
+    #     tokenize_fn=tokenize_fn,
+    #     data_path=data_path,
+    #     context_path=context_path
+    # )
+    # retriever.get_sparse_embedding()
+
+    # retriever = TwoStageReranker(
+    #     tokenize_fn=tokenize_fn,
+    #     args=data_args,  # args를 전달
+    #     data_path=data_path,
+    #     context_path=context_path
+    # )
+
+    # retriever = DenseRetrieval(
+    #     data_path=data_path,
+    #     context_path=context_path
+    # )
+    # retriever.get_dense_embedding()
 
     # if data_args.use_faiss:
     #     retriever.build_faiss(num_clusters=data_args.num_clusters)
@@ -169,7 +204,11 @@ def run_sparse_retrieval(
     #         datasets["validation"], topk=data_args.top_k_retrieval
     #     )
     # else:
-    df = retriever.retrieve(datasets["validation"], topk=data_args.top_k_retrieval)
+
+    # df = retriever.retrieve(datasets["validation"], topk=data_args.top_k_retrieval)
+    # df = retriever.retrieve(datasets["validation"], topk=data_args.top_k_retrieval, alpha=data_args.alpha_retrieval)
+    df = retriever.retrieve(datasets["validation"], topk=10, alpha=0.7)
+
 
     if training_args.do_predict:
         f = Features(
@@ -318,6 +357,7 @@ def run_mrc(
         formatted_predictions = [
             {"id": k, "prediction_text": v} for k, v in predictions.items()
         ]
+
         if training_args.do_predict:
             return formatted_predictions
 
@@ -373,12 +413,6 @@ def run_mrc(
 
     logger.info("*** Evaluate ***")
 
-    if training_args.do_predict:
-        predictions = trainer.predict(
-            test_dataset=eval_dataset, test_examples=datasets["validation"]
-        )
-        logger.info("No metric can be presented because there is no correct answer given. Job done!")
-
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
         metrics = trainer.evaluate()
@@ -387,6 +421,12 @@ def run_mrc(
 
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
+
+    if training_args.do_predict:
+        predictions = trainer.predict(
+            test_dataset=eval_dataset, test_examples=datasets["validation"]
+        )
+        logger.info("No metric can be presented because there is no correct answer given. Job done!")
 
 
 if __name__ == "__main__":
