@@ -23,7 +23,7 @@ from retrieval_2s_rerank import TwoStageReranker
 
 from transformers import (
     AutoConfig,
-    AutoModelForQuestionAnswering,
+    #AutoModelForQuestionAnswering
     AutoTokenizer,
     DataCollatorWithPadding,
     EvalPrediction,
@@ -82,11 +82,7 @@ def main():
         else model_args.model_name_or_path,
         use_fast=True,
     )
-    # tokenizer = AutoTokenizer.from_pretrained(
-    #     "Jinhwan/krelectra-base-mecab",
-    #     use_fast=True,
-    # )
-
+    #AutoModelForQuestionAnswering -> CNN_RobertaForQuestionAnswering : CNNlayer추가하여 성능향상
     model = CNN_RobertaForQuestionAnswering.from_pretrained(
         model_args.model_name_or_path,
         from_tf=bool(".ckpt" in model_args.model_name_or_path),
@@ -435,3 +431,4 @@ def run_mrc(
 
 if __name__ == "__main__":
     main()
+
