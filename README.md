@@ -60,6 +60,7 @@
 - 프로젝트는 2024-09-30 ~ 2024-10-25까지 진행되었습니다.
 
 <div align='center'>
+<img src='https://github.com/user-attachments/assets/e6b20d86-42db-4408-8480-35e03257f7c0'></div>
 
 
 </div>
