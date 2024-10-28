@@ -37,11 +37,11 @@
 
 |팀원   | 역할 |
 |------| --- |
-| 김진재 |  |
-| 박규태 |  |
-| 윤선웅 |  |
-| 이정민 |  |
-| 임한택 |  |
+| 김진재 | 베이스라인 코드 작성, 조사 전처리 알고리즘 개발, 앙상블 |
+| 박규태 | 데이터 특성 분석, EDA, Retrieval 구현, 비교 실험 및 개선(하이브리드 서치. Re-ranking, Dense 등등), Reader 모델 파인튜닝 |
+| 윤선웅 | KorQuAD 1.0 데이터 증강, 모델 파인튜닝, Reader 모델 개선(CNN layer 추가), Retrieval 모델 구현(BM25), 앙상블   |
+| 이정민 | 데이터 증강 (AEDA, Truncation 등), Question 데이터셋 튜닝, Korquad 데이터셋 튜닝 |
+| 임한택 | EDA, Retrieval 모델 개선(BM25Plus, Re-ranking 하이퍼파라미터 최적화), Reader 모델 개선(PLM 선정 및 Trainer 파라미터 최적화),   |
 
 </div>
 
