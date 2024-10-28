@@ -58,9 +58,7 @@
 
 ### 📅 프로젝트 타임라인
 - 프로젝트는 2024-09-30 ~ 2024-10-25까지 진행되었습니다.
-<div align='center'>
-<img src='https://github.com/user-attachments/assets/bfc8a1f8-cfb1-4387-a748-076b24808fe8'>
-</div>
+![타임라인](./docs/타임라인.png)
 
 ### 🕵️ 프로젝트 진행
 - 프로젝트를 진행하며 단계별로 실험하여 적용한 내용들을 아래와 같습니다.
