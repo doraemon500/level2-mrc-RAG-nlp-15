@@ -58,10 +58,8 @@
 
 ### 📅 프로젝트 타임라인
 - 프로젝트는 2024-09-30 ~ 2024-10-25까지 진행되었습니다.
-
 <div align='center'>
-
-
+<img src='https://github.com/user-attachments/assets/bfc8a1f8-cfb1-4387-a748-076b24808fe8'>
 </div>
 
 ### 🕵️ 프로젝트 진행
@@ -141,7 +139,19 @@
 ```
 
 ### 📦 src 폴더 구조 설명
-- TBD
+- arguments.py : 데이터 증강을 하는 파일
+- CNN_layer_model.py : PLM에 CNN Layer를 추가한 클래스 파일
+- data_analysis.py : 데이터셋을 분석하는 파일
+- ensemble : 모델 앙상블을 하는 폴더 (Soft, Hard 지원)
+- main.py : 모델 train, eval, prediction 을 수행하는 파일
+- optimize_retriever.py : 리트리버의 하이퍼파라미터를 최적화 하는 파일
+- qa_trainer.py : MRC Task에 대한 커스텀 Trainer 클래스 파일
+- retrieval_2s_rerank.py : rerank 리트리버 파일
+- retrieval_BM25.py : bm25 리트리버 파일
+- retrieval_Dense.py : DPR 리트리버 파일
+- retrieval_hybridsearch.py : hybrid-search 리트리버 파일
+- retrieval_SPLADE.py : SPLADE 리트리버 파일
+- retrieval_tfidf.py : TF-IDF 리트리버 파일
 
 
 ### 💾 Installation
