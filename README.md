@@ -15,7 +15,7 @@
 
 
 ## 🎖️ Leader Board
-프로젝트 결과 Public 리더보드 2등, Private 리더보드 2등 (공동 EM Score)을 기록하였습니다.
+프로젝트 결과 Public 리더보드 2등, Private 리더보드 2등을 기록하였습니다.
 ###  Public Leader Board 
 ![leaderboard_mid](./docs/leaderboard_mid.png)
 
