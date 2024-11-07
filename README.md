@@ -16,10 +16,10 @@
 
 ## 🎖️ Leader Board
 프로젝트 결과 Public 리더보드 2등, Private 리더보드 2등을 기록하였습니다.
-###  Public Leader Board 
+### 🥈  Public Leader Board (2위)
 ![leaderboard_mid](./docs/leaderboard_mid.png)
 
-###  Private Leader Board 
+### 🥈 Private Leader Board (2위)
 ![leaderboard_final](./docs/leaderboard_final.png)
 
 ## 👨‍💻 15조가십오조 멤버
