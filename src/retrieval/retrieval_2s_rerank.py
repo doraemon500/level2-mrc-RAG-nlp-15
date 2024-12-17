@@ -21,7 +21,9 @@ from retrieval_Dense import DenseRetrieval
 from sklearn.feature_extraction.text import TfidfVectorizer
 from rank_bm25 import BM25Okapi, BM25Plus
 from transformers import AutoTokenizer, AutoModel
+
 from utils import set_seed
+from retrieval import Retrieval
 
 set_seed(42)
 logger = logging.getLogger(__name__)
@@ -33,7 +35,7 @@ def timer(name):
     logging.info(f"[{name}] done in {time.time() - t0:.3f} s")
 
 
-class TwoStageReranker:
+class TwoStageReranker(Retrieval):
     def __init__(
         self,
         tokenize_fn,

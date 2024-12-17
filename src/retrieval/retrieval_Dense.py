@@ -15,6 +15,7 @@ import torch.nn.functional as F
 from transformers import AutoTokenizer, AutoModel
 
 from utils import set_seed
+from retrieval import Retrieval
 
 set_seed(42)
 logger = logging.getLogger(__name__)
@@ -30,11 +31,12 @@ def mean_pooling(model_output, attention_mask):
     input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
-class DenseRetrieval:
+class DenseRetrieval(Retrieval):
     def __init__(
         self,
         data_path: Optional[str] = "../data/",
         context_path: Optional[str] = "wikipedia_documents.json",
+        model_name: Optional[str] = 'sentence-transformers/paraphrase-multilingual-mpnet-base-v2',
         corpus: Optional[pd.DataFrame] = None
     ) -> NoReturn:
         self.data_path = data_path
@@ -46,21 +48,21 @@ class DenseRetrieval:
         self.ids = list(range(len(self.contexts)))
 
         self.tokenize_fn = AutoTokenizer.from_pretrained(
-            'sentence-transformers/paraphrase-multilingual-mpnet-base-v2'
+            model_name
         )
         self.dense_embeder = AutoModel.from_pretrained(
-            'sentence-transformers/paraphrase-multilingual-mpnet-base-v2'
+            model_name
         )
         self.dense_embeds = None
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     def get_dense_embedding(self, question=None, contexts=None):
         if contexts is not None:
             self.contexts = contexts
-            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-            self.dense_embeder.to(device)
+            self.dense_embeder.to(self.device)
             encoded_input = self.tokenize_fn(
                 self.contexts, padding=True, truncation=True, return_tensors='pt'
-            ).to(device)
+            ).to(self.device)
             with torch.no_grad():
                 model_output = self.dense_embeder(**encoded_input)
             sentence_embeddings = mean_pooling(model_output, encoded_input['attention_mask'])
@@ -75,32 +77,29 @@ class DenseRetrieval:
                 print("Dense embedding loaded.")
             else:
                 print("Building passage dense embeddings in batches.")
-                self.dense_embeds = []
+                self.dense_embeds = torch.zeros(len(self.contexts), self.dense_embeder.config.hidden_size)                
                 batch_size = 64
-                device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-                self.dense_embeder.to(device)
+                self.dense_embeder.to(self.device)
 
                 for i in tqdm(range(0, len(self.contexts), batch_size), desc="Encoding passages"):
                     batch_contexts = self.contexts[i:i+batch_size]
                     encoded_input = self.tokenize_fn(
                         batch_contexts, padding=True, truncation=True, return_tensors='pt'
-                    ).to(device)
+                    ).to(self.device)
                     with torch.no_grad():
                         model_output = self.dense_embeder(**encoded_input)
                     sentence_embeddings = mean_pooling(model_output, encoded_input['attention_mask'])
-                    self.dense_embeds.append(sentence_embeddings.cpu())
+                    self.dense_embeds[i] = sentence_embeddings.cpu()
                     del encoded_input, model_output, sentence_embeddings 
                     torch.cuda.empty_cache()  
 
-                self.dense_embeds = torch.cat(self.dense_embeds, dim=0)
                 torch.save(self.dense_embeds, emd_path)
                 print("Dense embeddings saved.")
         elif question is not None:
-            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-            self.dense_embeder.to(device)
+            self.dense_embeder.to(self.device)
             encoded_input = self.tokenize_fn(
                 question, padding=True, truncation=True, return_tensors='pt'
-            ).to(device)
+            ).to(self.device)
             with torch.no_grad():
                 model_output = self.dense_embeder(**encoded_input)
             sentence_embeddings = mean_pooling(model_output, encoded_input['attention_mask'])

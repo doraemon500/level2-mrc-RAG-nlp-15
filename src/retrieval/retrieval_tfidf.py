@@ -14,6 +14,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from tqdm.auto import tqdm
 
 from utils import set_seed
+from retrieval import Retrieval
 
 set_seed(42)
 logger = logging.getLogger(__name__)
@@ -25,7 +26,7 @@ def timer(name):
     logging.info(f"[{name}] done in {time.time() - t0:.3f} s")
 
 
-class TFIDFRetrieval:
+class TFIDFRetrieval(Retrieval):
     def __init__(
         self,
         tokenize_fn,

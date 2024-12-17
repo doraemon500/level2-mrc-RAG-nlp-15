@@ -33,6 +33,12 @@ class ModelArguments:
             "help": "Pretrained tokenizer name or path if not the same as model_name"
         },
     )
+    dense_model_name: Optional[str] = field(
+        default='sentence-transformers/paraphrase-multilingual-mpnet-base-v2',
+        metadata={
+            "help": "Dense model for dense embedding"
+        },
+    )
     #################################################################################
     batch_size: int = field(
         default=16
@@ -108,12 +114,6 @@ class DataTrainingArguments:
             "help": "Define how many clusters to use for faiss."
         },
     )
-    top_k_retrieval: int = field(
-        default=20,
-        metadata={
-            "help": "Define how many top-k passages to retrieve based on similarity."
-        },
-    )
     use_faiss: bool = field(
         default=True, metadata={
             "help": "Whether to build with faiss"
@@ -146,4 +146,10 @@ class DataTrainingArguments:
         metadata={
             "help": "Value for hybridizing embedding scores in HybridSearch"
         }
+    )
+    top_k_retrieval: int = field(
+        default=20,
+        metadata={
+            "help": "Define how many top-k passages to retrieve based on similarity."
+        },
     )

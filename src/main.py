@@ -16,10 +16,11 @@ from datasets import (
     load_metric
 )
 from qa_trainer import QATrainer
-from retrieval_BM25 import BM25SparseRetrieval
-from retrieval_hybridsearch import HybridSearch
-from retrieval_Dense import DenseRetrieval
-from retrieval_2s_rerank import TwoStageReranker
+from retrieval.retrieval_BM25 import BM25SparseRetrieval
+from retrieval.retrieval_hybridsearch import HybridSearch
+from retrieval.retrieval_Dense import DenseRetrieval
+from retrieval.retrieval_2s_rerank import TwoStageReranker
+from retrieval.retrieval import Retrieval
 
 from transformers import (
     AutoConfig,
@@ -90,8 +91,16 @@ def main():
     )
 
     if training_args.do_predict and data_args.eval_retrieval:
-        datasets = run_sparse_retrieval(
-            tokenizer.tokenize, datasets, training_args, data_args,
+        retriever = HybridSearch(
+            tokenize_fn=tokenize_fn,
+            # args=data_args,  # args를 전달
+            data_path=data_path,
+            context_path=context_path
+        )
+        retriever.get_sparse_embedding()
+        retriever.get_dense_embedding()
+        datasets = run_retrieval(
+            tokenizer.tokenize, retriever, datasets, training_args, data_args,
         )
 
     run_mrc(data_args, training_args, model_args, datasets, tokenizer, model)
@@ -160,55 +169,17 @@ def prepare_train_features(examples, tokenizer, question_column_name, pad_on_rig
     return tokenized_examples
 
 
-def run_sparse_retrieval(
+def run_retrieval(
     tokenize_fn: Callable[[str], List[str]],
+    retriever: Retrieval
     datasets: DatasetDict,
     training_args: TrainingArguments,
     data_args: DataTrainingArguments,
     data_path: str = "../data",
     context_path: str = "wikipedia_documents.json",
 ) -> DatasetDict:
-
-    retriever = HybridSearch(
-        tokenize_fn=tokenize_fn,
-        # args=data_args,  # args를 전달
-        data_path=data_path,
-        context_path=context_path
-    )
-    retriever.get_sparse_embedding()
-    retriever.get_dense_embedding()
-
-    # retriever = BM25SparseRetrieval(
-    #     tokenize_fn=tokenize_fn,
-    #     data_path=data_path,
-    #     context_path=context_path
-    # )
-    # retriever.get_sparse_embedding()
-
-    # retriever = TwoStageReranker(
-    #     tokenize_fn=tokenize_fn,
-    #     args=data_args,  # args를 전달
-    #     data_path=data_path,
-    #     context_path=context_path
-    # )
-
-    # retriever = DenseRetrieval(
-    #     data_path=data_path,
-    #     context_path=context_path
-    # )
-    # retriever.get_dense_embedding()
-
-    # if data_args.use_faiss:
-    #     retriever.build_faiss(num_clusters=data_args.num_clusters)
-    #     df = retriever.retrieve_faiss(
-    #         datasets["validation"], topk=data_args.top_k_retrieval
-    #     )
-    # else:
-
-    # df = retriever.retrieve(datasets["validation"], topk=data_args.top_k_retrieval)
-    # df = retriever.retrieve(datasets["validation"], topk=data_args.top_k_retrieval, alpha=data_args.alpha_retrieval)
-    df = retriever.retrieve(datasets["validation"], topk=10, alpha=0.7)
-
+    
+    df = retriever.retrieve(datasets["validation"], topk=data_args.top_k_retrieval, alpha=data_args.alpha_retrieval)
 
     if training_args.do_predict:
         f = Features(

@@ -14,6 +14,7 @@ from tqdm.auto import tqdm
 from transformers import AutoTokenizer
 
 from utils import set_seed
+from retrieval import Retrieval
 
 set_seed(42)
 
@@ -24,7 +25,7 @@ def timer(name):
     print(f"[{name}] done in {time.time() - t0:.3f} s")
 
 
-class BM25SparseRetrieval:
+class BM25SparseRetrieval(Retrieval):
     def __init__(self, tokenize_fn, args, data_path: Optional[str] = "../data/", context_path: Optional[str] = "wikipedia_documents.json") -> None:
         set_seed(42)
     def __init__(

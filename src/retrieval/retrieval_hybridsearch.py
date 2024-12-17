@@ -20,6 +20,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from rank_bm25 import BM25Okapi, BM25Plus
 from transformers import AutoTokenizer, AutoModel
 from utils import set_seed
+from retrieval import Retrieval
 
 set_seed(42)
 logger = logging.getLogger(__name__)
@@ -35,7 +36,7 @@ def mean_pooling(model_output, attention_mask):
     input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
-class HybridSearch:
+class HybridSearch(Retrieval):
     def __init__(
         self,
         tokenize_fn,
@@ -60,7 +61,7 @@ class HybridSearch:
         # self.sparse_embeder = TfidfVectorizer(
         #     tokenizer=self.tokenize_fn, ngram_range=(1, 2), max_features=50000,
         # )
-        self.spares_embeder = None
+        self.sparse_embeder = None
         self.dense_embeder = AutoModel.from_pretrained(
             self.dense_model_name
         )
@@ -86,7 +87,7 @@ class HybridSearch:
                 # self.sparse_embeds = self.sparse_embeder.fit_transform(self.contexts)
                 with open(vectorizer_path, "wb") as f:
                     pickle.dump(self.sparse_embeder, f)
-                if self.dense_embeds is not None:
+                if self.sparse_embeds is not None:
                     with open(embeddings_path, "wb") as f:
                         pickle.dump(self.sparse_embeds, f)
                 print("Sparse vectorizer and embeddings saved.")
